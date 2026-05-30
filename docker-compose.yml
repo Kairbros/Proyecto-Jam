@@ -62,6 +62,7 @@ services:
       MINIO_PUBLIC_URL: http://localhost:9000
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production_32chars}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       NODE_ENV: production
       PORT: "4000"
     ports:
