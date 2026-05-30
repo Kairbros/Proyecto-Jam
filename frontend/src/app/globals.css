@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-white text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100;
+  }
+
+  ::-webkit-scrollbar { @apply h-1.5 w-1.5; }
+  ::-webkit-scrollbar-track { @apply bg-gray-100 dark:bg-gray-900; }
+  ::-webkit-scrollbar-thumb { @apply bg-gray-300 dark:bg-gray-700; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-gray-400 dark:bg-gray-600; }
+}
+
+@layer components {
+  /* Flat accent button — itch-style, no gradient, sharp corners */
+  .btn-primary {
+    @apply inline-flex items-center gap-1.5 bg-violet-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-600 active:scale-95;
+  }
+
+  /* Ghost button — border only */
+  .btn-ghost {
+    @apply inline-flex items-center gap-1.5 border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-gray-400 hover:text-gray-900 active:scale-95 dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:text-white;
+  }
+
+  /* Monospace label for stats / badges */
+  .label-mono {
+    @apply font-mono text-[10px] font-semibold uppercase tracking-widest;
+  }
+
+  /* Subtle left-border accent card */
+  .accent-card {
+    @apply border-l-2 border-l-violet-500 bg-gray-50 pl-4 dark:bg-gray-900;
+  }
+
+  /* Card hover — flat outline glow */
+  .card-hover {
+    @apply transition-all duration-150;
+  }
+  .card-hover:hover {
+    box-shadow: 0 0 0 2px rgba(250, 92, 92, 0.5);
+  }
+}

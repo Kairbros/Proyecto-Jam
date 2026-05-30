@@ -1,0 +1,336 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// AUTH & USERS
+// ─────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  displayName  String
+  bio          String?
+  avatarUrl    String?
+  bannerUrl    String?
+  websiteUrl   String?
+  githubUrl    String?
+  itchUrl      String?
+  twitterUrl   String?
+  isVerified   Boolean  @default(false)
+  isBanned     Boolean  @default(false)
+  isAdmin      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens     RefreshToken[]
+  following         Follow[]           @relation("follower")
+  followers         Follow[]           @relation("following")
+  blocking          Block[]            @relation("blocker")
+  blockedBy         Block[]            @relation("blocked")
+  posts             Post[]
+  postLikes         PostLike[]
+  postComments      PostComment[]
+  organizedJams     Jam[]
+  jamParticipations JamParticipation[]
+  submissions       Submission[]
+  votes             Vote[]
+  notifications     Notification[]
+  reports           Report[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────
+// SOCIAL
+// ─────────────────────────────────────────────
+
+model Follow {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+}
+
+model Block {
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+}
+
+// ─────────────────────────────────────────────
+// POSTS / FEED
+// ─────────────────────────────────────────────
+
+model Post {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  jamId     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jam      Jam?          @relation(fields: [jamId], references: [id], onDelete: SetNull)
+  images   PostImage[]
+  likes    PostLike[]
+  comments PostComment[]
+}
+
+model PostImage {
+  id     String @id @default(cuid())
+  postId String
+  url    String
+  order  Int    @default(0)
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model PostLike {
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+}
+
+model PostComment {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────
+// JAMS
+// ─────────────────────────────────────────────
+
+enum JamStatus {
+  DRAFT
+  OPEN         // registrations open
+  IN_PROGRESS  // jam is running, theme is revealed
+  SUBMISSIONS  // submission window
+  VOTING       // voting window
+  CLOSED
+}
+
+enum TeamMode {
+  SOLO_ONLY
+  TEAMS_OPTIONAL
+  TEAMS_ONLY
+}
+
+model Jam {
+  id              String    @id @default(cuid())
+  slug            String    @unique
+  title           String
+  description     String
+  rules           String?
+  organizerId     String
+  status          JamStatus @default(DRAFT)
+  theme           String?
+  themeRevealed   Boolean   @default(false)
+  teamMode        TeamMode  @default(TEAMS_OPTIONAL)
+  maxParticipants Int?
+  maxTeamSize     Int?
+  coverUrl        String?
+  coverPosition   Int       @default(50)  // vertical focal point (0=top, 100=bottom)
+  // Timeline
+  startAt          DateTime
+  submissionsEndAt DateTime
+  votingEndAt      DateTime
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  organizer    User               @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  tags         JamTag[]
+  images       JamImage[]
+  participants JamParticipation[]
+  teams        Team[]
+  submissions  Submission[]
+  posts        Post[]
+  votes        Vote[]
+}
+
+model JamTag {
+  jamId String
+  tag   String
+
+  jam Jam @relation(fields: [jamId], references: [id], onDelete: Cascade)
+
+  @@id([jamId, tag])
+}
+
+model JamImage {
+  id    String @id @default(cuid())
+  jamId String
+  url   String
+  order Int    @default(0)
+
+  jam Jam @relation(fields: [jamId], references: [id], onDelete: Cascade)
+}
+
+model JamParticipation {
+  id        String   @id @default(cuid())
+  userId    String
+  jamId     String
+  teamId    String?
+  createdAt DateTime @default(now())
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jam  Jam   @relation(fields: [jamId], references: [id], onDelete: Cascade)
+  team Team? @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, jamId])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  jamId     String
+  name      String
+  createdAt DateTime @default(now())
+
+  jam        Jam                @relation(fields: [jamId], references: [id], onDelete: Cascade)
+  members    JamParticipation[]
+  submission Submission?
+}
+
+// ─────────────────────────────────────────────
+// SUBMISSIONS
+// ─────────────────────────────────────────────
+
+model Submission {
+  id          String   @id @default(cuid())
+  jamId       String
+  userId      String
+  teamId      String?  @unique
+  title       String
+  description String
+  fileUrl     String?
+  fileSizeBytes Int?
+  externalUrl String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  jam         Jam                    @relation(fields: [jamId], references: [id], onDelete: Cascade)
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team        Team?                  @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  screenshots SubmissionScreenshot[]
+  votes       Vote[]
+
+  @@unique([userId, jamId])
+}
+
+model SubmissionScreenshot {
+  id           String @id @default(cuid())
+  submissionId String
+  url          String
+  order        Int    @default(0)
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────
+// VOTING
+// ─────────────────────────────────────────────
+// vote-for-one: one vote per voter per jam, score 1-10
+// comment validated at API level (max ~125 words)
+// TODO: add VoteCategory when scaling to per-category voting
+
+model Vote {
+  id           String   @id @default(cuid())
+  jamId        String
+  submissionId String
+  voterId      String
+  score        Int      // 1-10
+  comment      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  jam        Jam        @relation(fields: [jamId], references: [id], onDelete: Cascade)
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  voter      User       @relation(fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@unique([voterId, jamId])
+}
+
+// ─────────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────────
+
+enum NotificationType {
+  NEW_FOLLOWER
+  POST_LIKE
+  POST_COMMENT
+  JAM_STATUS_CHANGED
+  JAM_SUBMISSION_RECEIVED
+  JAM_VOTING_OPEN
+  JAM_RESULTS_PUBLISHED
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  data      Json
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+}
+
+// ─────────────────────────────────────────────
+// MODERATION
+// ─────────────────────────────────────────────
+
+enum ReportTargetType {
+  USER
+  POST
+  SUBMISSION
+  JAM
+}
+
+model Report {
+  id         String           @id @default(cuid())
+  reporterId String
+  targetType ReportTargetType
+  targetId   String
+  reason     String
+  resolved   Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+
+  reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+}
