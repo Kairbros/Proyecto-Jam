@@ -1,12 +1,12 @@
 /**
  * Create or promote an admin account.
  *
- * Reads credentials from env vars (falling back to sensible dev defaults):
+ * Reads credentials from env vars (falling back to dev defaults):
  *   ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_USERNAME, ADMIN_DISPLAY_NAME
  *
- * Usage:
- *   npm run seed:admin
- *   ADMIN_EMAIL=me@site.com ADMIN_PASSWORD=secret123 npm run seed:admin
+ * Local dev:   npm run seed:admin
+ * Production:   docker compose exec backend node dist/seed-admin.js
+ *   (pass overrides:  docker compose exec -e ADMIN_EMAIL=me@x.com -e ADMIN_PASSWORD=secret backend node dist/seed-admin.js)
  *
  * - If a user with that email exists, it is promoted to admin (isAdmin = true).
  * - Otherwise a new verified admin user is created.
